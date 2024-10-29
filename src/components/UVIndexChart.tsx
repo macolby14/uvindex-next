@@ -11,21 +11,43 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { fetchUvData, IUVData, parseRawUvData } from "./UVIndexChart.helper";
+import { EditableText } from "@/components/EditableText";
 
 const MINUTE_IN_MILLISECONDS = 60 * 1000;
 const HOUR_IN_MILLISECONDS = MINUTE_IN_MILLISECONDS * 60;
 const DAY_IN_MILLISECONDS = HOUR_IN_MILLISECONDS * 24;
 
 // if it has been more than 24 hours since the last fetch or if it is apprxomiately 4am local time, fetch new data
-const shouldFetchNewData = (lastFetchTimestamp: number) => {
+function shouldFetchNewData(lastFetchTimestamp: number): boolean {
   const now = new Date();
   const lastFetchDate = new Date(lastFetchTimestamp);
   const hoursSinceLastFetch =
     (now.getTime() - lastFetchDate.getTime()) / HOUR_IN_MILLISECONDS;
   return hoursSinceLastFetch > 24 || now.getHours() === 4;
-};
+}
+
+interface ISunsetResponse {
+  sunsetTime: string;
+}
+
+async function fetchSunsetTime(zipCode: string): Promise<Date | null> {
+  const sunsetDate = await fetch(`/api/sunset?zipcode=${zipCode}`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch sunset time");
+      }
+      return response.json() as Promise<ISunsetResponse>;
+    })
+    .then((data) => new Date(data.sunsetTime))
+    .catch(() => null);
+  return sunsetDate;
+}
+
+const DEFAULT_ZIP_CODE = "10065";
 
 export function UVIndexChart() {
+  const [zipCode, setZipCode] = useState(DEFAULT_ZIP_CODE);
+  const [sunsetTime, setSunsetTime] = useState<Date | null>(null);
   const [uvData, setUvData] = useState<IUVData[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTimestamp, setCurrentTimestamp] = useState(
@@ -57,8 +79,20 @@ export function UVIndexChart() {
     }
   };
 
+  /**
+   * Load sunsetTime initially and whenever the zipcode changes
+   */
   useEffect(() => {
-    // update current time every minute
+    fetchSunsetTime(zipCode).then((sunsetTime) => {
+      setSunsetTime(sunsetTime);
+    });
+  }, [zipCode]);
+
+  /**
+   * Update the current timestamp every minute
+   * Load data initially and then once an hour
+   */
+  useEffect(() => {
     const updateCurrentTimeInterval = setInterval(() => {
       setCurrentTimestamp(new Date().getTime());
     }, MINUTE_IN_MILLISECONDS);
@@ -78,9 +112,20 @@ export function UVIndexChart() {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      <p className="space-y-1.5 p-6 font-semibold text-slate-600">
-        UV Index for {formatDate(new Date(earliestTimestamp), "MMMM d")}
-      </p>
+      <div className="p-6 space-y-1.5 font-semibold text-slate-600">
+        <p className="space-y-1.5 font-semibold text-slate-600">
+          UV Index for {formatDate(new Date(earliestTimestamp), "MMMM d")}
+        </p>
+        <div className="flex flex-row gap-1">
+          <p>Zip Code:</p>
+          <EditableText
+            initialText={zipCode}
+            onTextChange={(newZipCode) => {
+              setZipCode(newZipCode);
+            }}
+          />
+        </div>
+      </div>
       {loading ? (
         <div className="flex justify-center items-center h-64">Loading...</div>
       ) : (
