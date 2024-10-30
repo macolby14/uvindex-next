@@ -60,6 +60,8 @@ export function UVIndexChart() {
   );
   const lastDataUpdateTimestamp = useRef(0);
 
+  console.log("sunsetTime", sunsetTime);
+
   const earliestTimestamp =
     uvData.length > 0 ? uvData[0].dateTime : new Date().getTime();
 
@@ -183,11 +185,6 @@ export function UVIndexChart() {
               x={currentTimestamp}
               stroke="red"
               label={{ value: "Now", position: "insideTop" }}
-            />
-            <ReferenceLine
-              x={sunsetTime?.getTime()}
-              stroke="yellow"
-              label={{ value: "Sunset", position: "insideTop" }}
             />
             <ReferenceLine
               x={nextDayTimestamp}
