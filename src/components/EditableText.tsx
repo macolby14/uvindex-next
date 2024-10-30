@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function EditableText({
   initialText,
@@ -9,6 +9,10 @@ export function EditableText({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(initialText);
+
+  useEffect(() => {
+    setText(initialText);
+  }, [initialText]);
 
   const handleFinishEditing = () => {
     setIsEditing(false);

@@ -7,9 +7,11 @@ interface IRawUvData {
   UV_VALUE: number;
 }
 
-export const fetchUvData = async (): Promise<IRawUvData[] | null> => {
+export const fetchUvData = async (
+  zipCode: string
+): Promise<IRawUvData[] | null> => {
   const response = await fetch(
-    "https://data.epa.gov/efservice/getEnvirofactsUVHOURLY/ZIP/10065/JSON"
+    `https://data.epa.gov/efservice/getEnvirofactsUVHOURLY/ZIP/${zipCode}/JSON`
   )
     .then((data) => data.json() as Promise<IRawUvData[]>)
     .catch((error) => {
