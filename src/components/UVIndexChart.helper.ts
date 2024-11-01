@@ -1,3 +1,5 @@
+import { ISunriseSunsetResponse } from "@/app/api/sunrisesunset/route";
+
 interface IRawUvData {
   ORDER: number;
   ZIP: string;
@@ -100,4 +102,28 @@ export function parseRawUvData(data: IRawUvData[]): IUVData[] {
     formatDateField(keysToCamelCase(point))
   );
   return formattedData as IUVData[];
+}
+
+export async function fetchSunsetTime(zipcode: string): Promise<Date | null> {
+  // not clear  if the sunrise-sunset API uses UTC or local time for the date parameter
+  // will local date. Difference shouldn't be that much
+  const now = new Date();
+  const dateLocal = `${now.getFullYear()}-${
+    now.getMonth() + 1
+  }-${now.getDate()}`;
+  const sunsetDate = await fetch(
+    `/api/sunrisesunset?zipcode=${zipcode}&date=${dateLocal}`
+  )
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch sunset time");
+      }
+      return response.json() as Promise<ISunriseSunsetResponse>;
+    })
+    .then((data) => {
+      return new Date(parseInt(data.results.sunset) * 1000);
+    })
+    .catch(() => null);
+
+  return sunsetDate;
 }

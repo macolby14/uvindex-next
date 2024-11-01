@@ -19,22 +19,35 @@ async function getLatLong(
   return geocodeData.results[0].geometry.location;
 }
 
-async function getSunsetTime(lat: number, lng: number): Promise<string> {
+export interface ISunriseSunsetResponse {
+  status: string;
+  results: { sunrise: string; sunset: string };
+}
+
+async function getSunsetTime(
+  lat: number,
+  lng: number,
+  date: string
+): Promise<ISunriseSunsetResponse> {
   const res = await fetch(
-    `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&timezone=Etc/UTC`
+    `https://api.sunrisesunset.io/json?lat=${38.907192}&lng=${-77.036873}&timezone=UTC&date=${date}&time_format=unix`
   ).then((res) => res.json());
   if (res.status !== "OK") {
     throw new Error(`Sunrise-sunset API error: ${res.status}`);
   }
-  return res.results.sunset;
+  return res;
 }
 
 export async function GET(request: Request) {
   // // await useProxyIfSet(); //eslint-disable-line react-hooks/rules-of-hooks
   const { searchParams } = new URL(request.url);
   const zipcode = searchParams.get("zipcode");
+  let date = searchParams.get("date");
   if (zipcode == null) {
     return new Response("Missing zipcode", { status: 400 });
+  }
+  if (date == null) {
+    date = "today";
   }
   const apiKey = process.env.GOOGLE_API_KEY;
   if (apiKey == null) {
@@ -42,8 +55,8 @@ export async function GET(request: Request) {
   }
   try {
     const { lat, lng } = await getLatLong(zipcode);
-    const sunsetTime = await getSunsetTime(lat, lng);
-    return new Response(JSON.stringify({ sunsetTime }), {
+    const results = await getSunsetTime(lat, lng, date);
+    return new Response(JSON.stringify({ ...results }), {
       headers: { "content-type": "application/json" },
     });
   } catch (e) {
