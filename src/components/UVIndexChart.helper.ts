@@ -104,7 +104,9 @@ export function parseRawUvData(data: IRawUvData[]): IUVData[] {
   return formattedData as IUVData[];
 }
 
-export async function fetchSunsetTime(zipcode: string): Promise<Date | null> {
+export async function fetchSunriseSunsetTime(
+  zipcode: string
+): Promise<{ sunrise: Date; sunset: Date } | null> {
   // not clear  if the sunrise-sunset API uses UTC or local time for the date parameter
   // will local date. Difference shouldn't be that much
   const now = new Date();
@@ -121,7 +123,10 @@ export async function fetchSunsetTime(zipcode: string): Promise<Date | null> {
       return response.json() as Promise<ISunriseSunsetResponse>;
     })
     .then((data) => {
-      return new Date(parseInt(data.results.sunset) * 1000);
+      return {
+        sunset: new Date(parseInt(data.results.sunset) * 1000),
+        sunrise: new Date(parseInt(data.results.sunrise) * 1000),
+      };
     })
     .catch(() => null);
 

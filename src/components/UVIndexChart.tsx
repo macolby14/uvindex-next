@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
-  fetchSunsetTime,
+  fetchSunriseSunsetTime,
   fetchUvData,
   IUVData,
   parseRawUvData,
@@ -40,6 +40,9 @@ export function UVIndexChart() {
     setZipcode,
   } = useUserZipCodeOrDefault(DEFAULT_ZIP_CODE);
   const [sunsetTimestampMs, setSunsetTimestampMs] = useState<number | null>(
+    null
+  );
+  const [sunriseTimestampMs, setSunriseTimestmapMs] = useState<number | null>(
     null
   );
   const [uvData, setUvData] = useState<IUVData[]>([]);
@@ -74,9 +77,12 @@ export function UVIndexChart() {
     if (isZipcodeLoading) {
       return;
     }
-    fetchSunsetTime(zipcode).then((sunsetTime) => {
-      if (sunsetTime !== null) {
-        setSunsetTimestampMs(sunsetTime.getTime());
+    fetchSunriseSunsetTime(zipcode).then((times) => {
+      if (times !== null) {
+        setSunsetTimestampMs(times.sunset.getTime());
+      }
+      if (times !== null) {
+        setSunriseTimestmapMs(times.sunrise.getTime());
       }
     });
     loadUvData(zipcode);
@@ -175,6 +181,13 @@ export function UVIndexChart() {
               stroke="red"
               label={{ value: "Now", position: "insideTop" }}
             />
+            {sunriseTimestampMs != null && (
+              <ReferenceLine
+                x={sunriseTimestampMs}
+                stroke="blue"
+                label={{ value: "Sunrise", position: "insideTop" }}
+              />
+            )}
             {sunsetTimestampMs != null && (
               <ReferenceLine
                 x={sunsetTimestampMs}

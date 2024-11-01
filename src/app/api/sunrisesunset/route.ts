@@ -61,6 +61,6 @@ export async function GET(request: Request) {
     });
   } catch (e) {
     console.error(e);
-    return new Response("Error fetching sunset data", { status: 500 });
+    return new Response("Error fetching sunrise/sunset data", { status: 500 });
   }
 }
