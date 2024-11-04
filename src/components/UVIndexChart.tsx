@@ -15,6 +15,7 @@ import {
   fetchUvData,
   IUVData,
   parseRawUvData,
+  removeInvalidData,
 } from "./UVIndexChart.helper";
 import { EditableText } from "@/components/EditableText";
 import { useUserZipCodeOrDefault } from "@/app/hooks/useUserZipCodeOrDefault";
@@ -66,7 +67,8 @@ export function UVIndexChart() {
     if (rawData !== null) {
       lastDataUpdateTimestamp.current = new Date().getTime();
       const formattedData = parseRawUvData(rawData);
-      setUvData(formattedData);
+      const correctedData = removeInvalidData(formattedData);
+      setUvData(correctedData);
     }
   };
 

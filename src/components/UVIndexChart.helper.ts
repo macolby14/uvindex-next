@@ -1,6 +1,6 @@
 import { ISunriseSunsetResponse } from "@/app/api/sunrisesunset/route";
 
-interface IRawUvData {
+export interface IRawUvData {
   ORDER: number;
   ZIP: string;
   CITY: string;
@@ -74,7 +74,6 @@ export function parseDate(dateString: string): number {
     "Dec",
   ].indexOf(monthRaw);
 
-  // Convert hour to 24-hour format
   // Convert hour to 24-hour format, accounting for 12 AM and 12 PM
   let hour = parseInt(hourRaw);
   if (hour === 12) {
@@ -90,6 +89,7 @@ export function parseDate(dateString: string): number {
 }
 
 export interface IUVData {
+  order: number;
   zip: string;
   city: string;
   state: string;
@@ -102,6 +102,25 @@ export function parseRawUvData(data: IRawUvData[]): IUVData[] {
     formatDateField(keysToCamelCase(point))
   );
   return formattedData as IUVData[];
+}
+
+/**UV Data has had bad data in some cases. This is to fix that
+ * The UV data has an ORDER field that is supposed to be sequential. If it is not, we will remove the data point
+ * This implenation could result in gaps in the ORDER
+ */
+export function removeInvalidData(data: IUVData[]): IUVData[] {
+  const sortedData = data.sort((a, b) => a.order - b.order);
+  let prevDateTime: number | undefined;
+
+  return sortedData.filter((item) => {
+    if (prevDateTime == undefined || item.dateTime >= prevDateTime) {
+      prevDateTime = item.dateTime;
+      return true;
+    } else {
+      console.error("Data point found not in the correct order");
+      return false;
+    }
+  });
 }
 
 export async function fetchSunriseSunsetTime(
