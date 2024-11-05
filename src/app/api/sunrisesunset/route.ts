@@ -24,13 +24,16 @@ export interface ISunriseSunsetResponse {
   results: { sunrise: string; sunset: string };
 }
 
-async function getSunsetTime(
+async function getSunriseSunsetTime(
   lat: number,
   lng: number,
-  date: string
+  date: "today" | "tomorrow" //  NOTE: weird that if I use the HST date instead of today, I get yestersday, which causes sunrise and sunset times to be for the wrong day
 ): Promise<ISunriseSunsetResponse> {
+  console.log(
+    `Fetching sunrise sunset: https://api.sunrisesunset.io/json?lat=${lat}&lng=${lng}&date=${date}&time_format=unix`
+  );
   const res = await fetch(
-    `https://api.sunrisesunset.io/json?lat=${38.907192}&lng=${-77.036873}&timezone=UTC&date=${date}&time_format=unix`
+    `https://api.sunrisesunset.io/json?lat=${lat}&lng=${lng}&timezone=UTC&date=${date}&time_format=unix`
   ).then((res) => res.json());
   if (res.status !== "OK") {
     throw new Error(`Sunrise-sunset API error: ${res.status}`);
@@ -55,7 +58,7 @@ export async function GET(request: Request) {
   }
   try {
     const { lat, lng } = await getLatLong(zipcode);
-    const results = await getSunsetTime(lat, lng, date);
+    const results = await getSunriseSunsetTime(lat, lng, "today"); // TODO: Remove hardcode today
     return new Response(JSON.stringify({ ...results }), {
       headers: { "content-type": "application/json" },
     });
