@@ -1,4 +1,6 @@
-interface IRawUvData {
+import { ISunriseSunsetResponse } from "@/app/api/sunrisesunset/route";
+
+export interface IRawUvData {
   ORDER: number;
   ZIP: string;
   CITY: string;
@@ -72,7 +74,6 @@ export function parseDate(dateString: string): number {
     "Dec",
   ].indexOf(monthRaw);
 
-  // Convert hour to 24-hour format
   // Convert hour to 24-hour format, accounting for 12 AM and 12 PM
   let hour = parseInt(hourRaw);
   if (hour === 12) {
@@ -88,6 +89,7 @@ export function parseDate(dateString: string): number {
 }
 
 export interface IUVData {
+  order: number;
   zip: string;
   city: string;
   state: string;
@@ -100,4 +102,52 @@ export function parseRawUvData(data: IRawUvData[]): IUVData[] {
     formatDateField(keysToCamelCase(point))
   );
   return formattedData as IUVData[];
+}
+
+/**UV Data has had bad data in some cases. This is to fix that
+ * The UV data has an ORDER field that is supposed to be sequential. If it is not, we will remove the data point
+ * This implenation could result in gaps in the ORDER
+ */
+export function removeInvalidData(data: IUVData[]): IUVData[] {
+  const sortedData = data.sort((a, b) => a.order - b.order);
+  let prevDateTime: number | undefined;
+
+  return sortedData.filter((item) => {
+    if (prevDateTime == undefined || item.dateTime >= prevDateTime) {
+      prevDateTime = item.dateTime;
+      return true;
+    } else {
+      console.error("Data point found not in the correct order");
+      return false;
+    }
+  });
+}
+
+export async function fetchSunriseSunsetTime(
+  zipcode: string
+): Promise<{ sunrise: Date; sunset: Date } | null> {
+  // not clear  if the sunrise-sunset API uses UTC or local time for the date parameter
+  // will local date. Difference shouldn't be that much
+  const now = new Date();
+  const dateLocal = `${now.getFullYear()}-${
+    now.getMonth() + 1
+  }-${now.getDate()}`;
+  const sunsetDate = await fetch(
+    `/api/sunrisesunset?zipcode=${zipcode}&date=${dateLocal}`
+  )
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch sunset time");
+      }
+      return response.json() as Promise<ISunriseSunsetResponse>;
+    })
+    .then((data) => {
+      return {
+        sunset: new Date(parseInt(data.results.sunset) * 1000),
+        sunrise: new Date(parseInt(data.results.sunrise) * 1000),
+      };
+    })
+    .catch(() => null);
+
+  return sunsetDate;
 }

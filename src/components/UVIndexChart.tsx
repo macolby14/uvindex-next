@@ -10,7 +10,13 @@ import {
   LineChart,
   ResponsiveContainer,
 } from "recharts";
-import { fetchUvData, IUVData, parseRawUvData } from "./UVIndexChart.helper";
+import {
+  fetchSunriseSunsetTime,
+  fetchUvData,
+  IUVData,
+  parseRawUvData,
+  removeInvalidData,
+} from "./UVIndexChart.helper";
 import { EditableText } from "@/components/EditableText";
 import { useUserZipCodeOrDefault } from "@/app/hooks/useUserZipCodeOrDefault";
 
@@ -26,24 +32,6 @@ function isOldDataStale(lastFetchTimestamp: number): boolean {
     (now.getTime() - lastFetchDate.getTime()) / HOUR_IN_MILLISECONDS;
   return hoursSinceLastFetch > 24 || now.getHours() === 4;
 }
-
-interface ISunsetResponse {
-  sunsetTime: string;
-}
-
-async function fetchSunsetTime(zipcode: string): Promise<Date | null> {
-  const sunsetDate = await fetch(`/api/sunset?zipcode=${zipcode}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Failed to fetch sunset time");
-      }
-      return response.json() as Promise<ISunsetResponse>;
-    })
-    .then((data) => new Date(data.sunsetTime))
-    .catch(() => null);
-  return sunsetDate;
-}
-
 const DEFAULT_ZIP_CODE = "10065";
 
 export function UVIndexChart() {
@@ -52,15 +40,18 @@ export function UVIndexChart() {
     zipcode,
     setZipcode,
   } = useUserZipCodeOrDefault(DEFAULT_ZIP_CODE);
-  const [sunsetTime, setSunsetTime] = useState<Date | null>(null);
+  const [sunsetTimestampMs, setSunsetTimestampMs] = useState<number | null>(
+    null
+  );
+  const [sunriseTimestampMs, setSunriseTimestmapMs] = useState<number | null>(
+    null
+  );
   const [uvData, setUvData] = useState<IUVData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentTimestamp, setCurrentTimestamp] = useState(
+  const [currentTimestampMs, setCurrentTimestampMs] = useState(
     new Date().getTime()
   );
   const lastDataUpdateTimestamp = useRef(0);
-
-  console.log("sunsetTime", sunsetTime);
 
   const earliestTimestamp =
     uvData.length > 0 ? uvData[0].dateTime : new Date().getTime();
@@ -76,7 +67,8 @@ export function UVIndexChart() {
     if (rawData !== null) {
       lastDataUpdateTimestamp.current = new Date().getTime();
       const formattedData = parseRawUvData(rawData);
-      setUvData(formattedData);
+      const correctedData = removeInvalidData(formattedData);
+      setUvData(correctedData);
     }
   };
 
@@ -87,8 +79,13 @@ export function UVIndexChart() {
     if (isZipcodeLoading) {
       return;
     }
-    fetchSunsetTime(zipcode).then((sunsetTime) => {
-      setSunsetTime(sunsetTime);
+    fetchSunriseSunsetTime(zipcode).then((times) => {
+      if (times !== null) {
+        setSunsetTimestampMs(times.sunset.getTime());
+      }
+      if (times !== null) {
+        setSunriseTimestmapMs(times.sunrise.getTime());
+      }
     });
     loadUvData(zipcode);
   }, [isZipcodeLoading, zipcode]);
@@ -98,7 +95,7 @@ export function UVIndexChart() {
    */
   useEffect(() => {
     const updateCurrentTimeInterval = setInterval(() => {
-      setCurrentTimestamp(new Date().getTime());
+      setCurrentTimestampMs(new Date().getTime());
     }, MINUTE_IN_MILLISECONDS);
 
     return () => {
@@ -182,10 +179,24 @@ export function UVIndexChart() {
             />
             <Line dataKey="uvValue" type="monotone" stroke="#8884d8" />
             <ReferenceLine
-              x={currentTimestamp}
+              x={currentTimestampMs}
               stroke="red"
               label={{ value: "Now", position: "insideTop" }}
             />
+            {sunriseTimestampMs != null && (
+              <ReferenceLine
+                x={sunriseTimestampMs}
+                stroke="blue"
+                label={{ value: "Sunrise", position: "insideTop" }}
+              />
+            )}
+            {sunsetTimestampMs != null && (
+              <ReferenceLine
+                x={sunsetTimestampMs}
+                stroke="blue"
+                label={{ value: "Sunset", position: "insideTop" }}
+              />
+            )}
             <ReferenceLine
               x={nextDayTimestamp}
               stroke="lightblue"
