@@ -28,10 +28,7 @@ export function useUserZipCodeOrDefault(defaultValue: string) {
           )
             .then(({ zipcode }) => setZipcode(zipcode))
             .catch((e) => {
-              console.error(
-                "Failed to fetch zip code frome external source",
-                e
-              );
+              console.error("Failed to fetch zip code from external source", e);
               setZipcode(defaultValue);
             })
             .finally(() => setIsLoading(false));
