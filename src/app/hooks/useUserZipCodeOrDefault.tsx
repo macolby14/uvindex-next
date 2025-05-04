@@ -24,7 +24,10 @@ export function useUserZipCodeOrDefault(defaultValue: string) {
           position.coords.longitude
         )
           .then(({ zipcode }) => setZipcode(zipcode))
-          .catch((e) => console.error(e))
+          .catch((e) => {
+            console.error("Failed to fetch zip code", e);
+            setZipcode(defaultValue);
+          })
           .finally(() => setIsLoading(false));
       });
     }
